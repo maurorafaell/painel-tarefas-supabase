@@ -1,0 +1,33 @@
+body {
+  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f7 100%);
+  min-height: 100vh;
+}
+
+.card {
+  border-radius: 18px;
+}
+
+.navbar-brand {
+  letter-spacing: 0.3px;
+}
+
+.lista-tarefas .list-group-item {
+  border: none;
+  border-radius: 14px !important;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.tarefa-concluida .titulo-tarefa {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.tarefa-descricao {
+  color: #6c757d;
+}
+
+.tarefa-meta {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
