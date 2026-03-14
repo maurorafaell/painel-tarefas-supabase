@@ -15,6 +15,18 @@ const botoesFiltro = document.querySelectorAll(".filtro-btn");
 
 let filtroAtual = "todas";
 
+function formatarData(dataIso) {
+  if (!dataIso) {
+    return "Desconhecida";
+  }
+
+  return new Date(dataIso).toLocaleDateString("pt-PT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
 function atualizarContador(total) {
   contadorTarefas.textContent = `${total} ${total === 1 ? "tarefa" : "tarefas"}`;
 }
@@ -45,6 +57,41 @@ function aplicarFiltro(tarefas) {
   return tarefas;
 }
 
+function gerarHtmlTarefa(tarefa) {
+  return `
+    <li class="list-group-item ${tarefa.concluida ? "tarefa-concluida" : ""}">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div class="flex-grow-1">
+          <div class="fw-bold titulo-tarefa">${tarefa.titulo}</div>
+          <div class="tarefa-descricao mb-2">${tarefa.descricao ?? ""}</div>
+
+          <div class="tarefa-meta">
+            <span>Estado: ${tarefa.concluida ? "Concluída" : "Pendente"}</span>
+            <span class="mx-2">|</span>
+            <span>Criada em ${formatarData(tarefa.created_at)}</span>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button
+            class="btn btn-sm ${tarefa.concluida ? "btn-outline-warning" : "btn-outline-success"}"
+            onclick="alternarConclusao(${tarefa.id}, ${tarefa.concluida})"
+          >
+            ${tarefa.concluida ? "Reabrir" : "Concluir"}
+          </button>
+
+          <button
+            class="btn btn-sm btn-outline-danger"
+            onclick="apagarTarefa(${tarefa.id})"
+          >
+            Apagar
+          </button>
+        </div>
+      </div>
+    </li>
+  `;
+}
+
 function renderizarTarefas(tarefas) {
   if (!tarefas || tarefas.length === 0) {
     listaTarefas.innerHTML = `
@@ -55,39 +102,8 @@ function renderizarTarefas(tarefas) {
     return;
   }
 
-  listaTarefas.innerHTML = "";
-
-  tarefas.forEach((tarefa) => {
-    listaTarefas.innerHTML += `
-      <li class="list-group-item ${tarefa.concluida ? "tarefa-concluida" : ""}">
-        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-          <div class="flex-grow-1">
-            <div class="fw-bold titulo-tarefa">${tarefa.titulo}</div>
-            <div class="tarefa-descricao">${tarefa.descricao ?? ""}</div>
-            <div class="tarefa-meta mt-2">
-              Estado: ${tarefa.concluida ? "Concluída" : "Pendente"}
-            </div>
-          </div>
-
-          <div class="d-flex gap-2 flex-wrap">
-            <button
-              class="btn btn-sm ${tarefa.concluida ? "btn-outline-warning" : "btn-outline-success"}"
-              onclick="alternarConclusao(${tarefa.id}, ${tarefa.concluida})"
-            >
-              ${tarefa.concluida ? "Reabrir" : "Concluir"}
-            </button>
-
-            <button
-              class="btn btn-sm btn-outline-danger"
-              onclick="apagarTarefa(${tarefa.id})"
-            >
-              Apagar
-            </button>
-          </div>
-        </div>
-      </li>
-    `;
-  });
+  const html = tarefas.map((tarefa) => gerarHtmlTarefa(tarefa)).join("");
+  listaTarefas.innerHTML = html;
 }
 
 async function carregarTarefas() {
@@ -101,12 +117,12 @@ async function carregarTarefas() {
     .order("id", { ascending: false });
 
   if (error) {
+    console.error("Erro ao carregar tarefas:", error);
     listaTarefas.innerHTML = `
       <li class="list-group-item text-danger">
         Erro ao carregar: ${error.message}
       </li>
     `;
-    console.error("Erro ao carregar tarefas:", error);
     return;
   }
 
@@ -132,8 +148,8 @@ async function criarTarefa(event) {
     .from("tarefas")
     .insert([
       {
-        titulo: titulo,
-        descricao: descricao,
+        titulo,
+        descricao,
         concluida: false
       }
     ]);
