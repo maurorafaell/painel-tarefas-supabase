@@ -65,9 +65,9 @@ function gerarHtmlTarefa(tarefa) {
           <div class="fw-bold titulo-tarefa">${tarefa.titulo}</div>
           <div class="tarefa-descricao mb-2">${tarefa.descricao ?? ""}</div>
 
-          <div class="tarefa-meta">
+          <div class="tarefa-meta d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-1 gap-sm-0">
             <span>Estado: ${tarefa.concluida ? "Concluída" : "Pendente"}</span>
-            <span class="mx-2">|</span>
+            <span class="d-none d-sm-inline mx-2">|</span>
             <span>Criada em ${formatarData(tarefa.created_at)}</span>
           </div>
         </div>
