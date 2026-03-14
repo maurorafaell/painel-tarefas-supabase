@@ -24,4 +24,4 @@ Aplicação web de gestão de tarefas com CRUD completo.
 
 ## Deploy
 
-https://seu-projeto.vercel.app
+https://painel-tarefas-supabase.vercel.app/
