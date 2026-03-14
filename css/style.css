@@ -30,4 +30,15 @@ body {
 .tarefa-meta {
   font-size: 0.875rem;
   color: #707172c5;
+  line-height: 1.4;
+}
+
+@media (max-width: 576px) {
+  #btn-recarregar {
+    width: 42px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
