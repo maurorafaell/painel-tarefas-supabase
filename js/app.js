@@ -85,8 +85,7 @@ function gerarHtmlTarefa(tarefa) {
           <span title="${tarefa.concluida ? "Reabra a tarefa para editar" : "Editar tarefa"}">
             <button
               class="btn btn-sm ${tarefa.concluida ? "btn-outline-secondary" : "btn-outline-primary"}"
-              onclick="abrirEdicao(${tarefa.id})"
-              ${tarefa.concluida ? "disabled" : ""}
+              onclick="${tarefa.concluida ? "mostrarMensagemEdicao()" : `abrirEdicao(${tarefa.id})`}"
             >
               Editar
             </button>
@@ -109,6 +108,10 @@ function gerarHtmlTarefa(tarefa) {
       </div>
     </li>
   `;
+}
+
+function mostrarMensagemEdicao() {
+  alert("Esta tarefa está concluída. Reabra a tarefa para poder editar.");
 }
 
 function renderizarTarefas(tarefas) {
