@@ -13,7 +13,16 @@ const btnRecarregar = document.getElementById("btn-recarregar");
 const contadorTarefas = document.getElementById("contador-tarefas");
 const botoesFiltro = document.querySelectorAll(".filtro-btn");
 
+const formEditarTarefa = document.getElementById("form-editar-tarefa");
+const inputEditarId = document.getElementById("editar-id");
+const inputEditarTitulo = document.getElementById("editar-titulo");
+const inputEditarDescricao = document.getElementById("editar-descricao");
+
+const modalEditarElemento = document.getElementById("modal-editar-tarefa");
+const modalEditar = new bootstrap.Modal(modalEditarElemento);
+
 let filtroAtual = "todas";
+let tarefasCache = [];
 
 function formatarData(dataIso) {
   if (!dataIso) {
@@ -73,6 +82,16 @@ function gerarHtmlTarefa(tarefa) {
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
+          <span title="${tarefa.concluida ? "Reabra a tarefa para editar" : "Editar tarefa"}">
+            <button
+              class="btn btn-sm ${tarefa.concluida ? "btn-outline-secondary" : "btn-outline-primary"}"
+              onclick="abrirEdicao(${tarefa.id})"
+              ${tarefa.concluida ? "disabled" : ""}
+            >
+              Editar
+            </button>
+          </span>
+
           <button
             class="btn btn-sm ${tarefa.concluida ? "btn-outline-warning" : "btn-outline-success"}"
             onclick="alternarConclusao(${tarefa.id}, ${tarefa.concluida})"
@@ -126,6 +145,8 @@ async function carregarTarefas() {
     return;
   }
 
+  tarefasCache = data;
+
   atualizarContador(data.length);
 
   const tarefasFiltradas = aplicarFiltro(data);
@@ -161,6 +182,55 @@ async function criarTarefa(event) {
   }
 
   formTarefa.reset();
+  carregarTarefas();
+}
+
+function abrirEdicao(id) {
+  const tarefa = tarefasCache.find((item) => item.id === id);
+
+  if (!tarefa) {
+    alert("Tarefa não encontrada.");
+    return;
+  }
+
+  if (tarefa.concluida) {
+    alert("Reabra a tarefa antes de editar.");
+    return;
+  }
+
+  inputEditarId.value = tarefa.id;
+  inputEditarTitulo.value = tarefa.titulo;
+  inputEditarDescricao.value = tarefa.descricao ?? "";
+  modalEditar.show();
+}
+
+async function guardarEdicao(event) {
+  event.preventDefault();
+
+  const id = Number(inputEditarId.value);
+  const titulo = inputEditarTitulo.value.trim();
+  const descricao = inputEditarDescricao.value.trim();
+
+  if (!titulo) {
+    alert("O título é obrigatório.");
+    return;
+  }
+
+  const { error } = await client
+    .from("tarefas")
+    .update({
+      titulo,
+      descricao
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erro ao editar tarefa:", error);
+    alert("Erro ao editar tarefa: " + error.message);
+    return;
+  }
+
+  modalEditar.hide();
   carregarTarefas();
 }
 
@@ -208,6 +278,11 @@ botoesFiltro.forEach((botao) => {
 });
 
 formTarefa.addEventListener("submit", criarTarefa);
+formEditarTarefa.addEventListener("submit", guardarEdicao);
 btnRecarregar.addEventListener("click", carregarTarefas);
 
 carregarTarefas();
+
+window.abrirEdicao = abrirEdicao;
+window.alternarConclusao = alternarConclusao;
+window.apagarTarefa = apagarTarefa;
