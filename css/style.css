@@ -64,22 +64,32 @@ body {
 }
 
 /* =========================================================
-   DASHBOARD
+   DASHBOARD COMPACTO
    ========================================================= */
+
 .card-dashboard {
-  min-height: 130px;
+  min-height: auto;
+}
+
+.dashboard-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
 }
 
 .dashboard-label {
   font-size: 0.95rem;
   color: #6c675c;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0;
 }
 
 .dashboard-value {
-  font-size: 2.3rem;
+  font-size: 2rem;
   line-height: 1;
   color: #1f1f1f;
+  white-space: nowrap;
 }
 
 /* =========================================================
@@ -150,7 +160,7 @@ body {
 }
 
 /* =========================================================
-   BOTÃO RECARREGAR NO MOBILE
+   BOTÃO RECARREGAR NO MOBILE E AJUSTE ESPAÇAMENTO
    ========================================================= */
 @media (max-width: 576px) {
   #btn-recarregar {
@@ -158,6 +168,24 @@ body {
     padding: 6px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-inline {
+    padding: 16px 18px;
+  }
+
+  .dashboard-value {
+    font-size: 1.8rem;
+  }
+
+  .grafico-area {
+    width: 220px;
+  }
+
+  .legenda-prioridades-compacta {
     justify-content: center;
   }
 }
@@ -199,4 +227,205 @@ button:disabled {
   .dashboard-value {
     font-size: 2rem;
   }
+}
+
+/* =========================================================
+   BADGES DE PRIORIDADE
+   ========================================================= */
+
+.badge-prioridade {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+/* Prioridade alta */
+
+.badge-alta {
+  background-color: #e8c6c2;
+  color: #6d1f1a;
+}
+
+/* Prioridade média */
+
+.badge-media {
+  background-color: #efe2b8;
+  color: #6a5a14;
+}
+
+/* Prioridade baixa */
+
+.badge-baixa {
+  background-color: #d8e4ef;
+  color: #2a4c6d;
+}
+
+/* =========================================================
+   DESTAQUE PARA PRIORIDADE ALTA
+   ========================================================= */
+
+.tarefa-alta {
+  border-left: 5px solid #c94c4c !important;
+  background: #fdf6f5;
+}
+
+/* =========================================================
+   CARD DO GRÁFICO
+   ========================================================= */
+
+.card-grafico {
+  min-height: 320px;
+}
+
+.grafico-wrapper {
+  min-width: 280px;
+}
+
+.grafico-area {
+  width: 260px;
+  max-width: 100%;
+}
+
+/* =========================================================
+   GRÁFICO E LEGENDA COMPACTA
+   ========================================================= */
+
+.card-grafico {
+  min-height: auto;
+}
+
+.grafico-area {
+  width: 240px;
+  max-width: 100%;
+}
+
+.legenda-prioridades-compacta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.legenda-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d7cfbd;
+  border-radius: 999px;
+  background: #fcfaf5;
+}
+
+.legenda-cor {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.cor-alta {
+  background-color: #e8c6c2;
+}
+
+.cor-media {
+  background-color: #efe2b8;
+}
+
+.cor-baixa {
+  background-color: #d8e4ef;
+}
+
+.legenda-texto {
+  font-size: 0.9rem;
+  color: #39352e;
+}
+
+.legenda-valor {
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+/* =========================================================
+   LEGENDA DE PRIORIDADES
+   ========================================================= */
+
+.legenda-prioridades {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 320px;
+}
+
+.legenda-item {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d7cfbd;
+  border-radius: 12px;
+  background: #fcfaf5;
+}
+
+.legenda-cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.cor-alta {
+  background-color: #e8c6c2;
+}
+
+.cor-media {
+  background-color: #efe2b8;
+}
+
+.cor-baixa {
+  background-color: #d8e4ef;
+}
+
+.legenda-texto {
+  font-weight: 600;
+  color: #39352e;
+}
+
+.legenda-valor {
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+/* =========================================================
+   SELECT DE FILTRO PADRONIZADO
+   ========================================================= */
+
+.btn-select-filtro {
+  height: 38px;
+  min-width: 170px;
+  padding: 0 36px 0 14px;
+  border: 1px solid #39352e;
+  border-radius: 12px;
+  background-color: #fcfaf5;
+  color: #39352e;
+  font-size: 0.95rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #39352e 50%),
+    linear-gradient(135deg, #39352e 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.btn-select-filtro:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(43, 108, 176, 0.12);
+  border-color: #7da8d4;
 }

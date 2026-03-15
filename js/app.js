@@ -1,3 +1,5 @@
+let graficoPrioridades = null;
+
 /* =========================================================
    CONFIGURAÇÃO DO SUPABASE
    URL e chave pública do projeto
@@ -7,6 +9,10 @@ const SUPABASE_KEY = "sb_publishable_C2SR6u5i0KpIQdozqFJEdg_ij2IbLsg";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+if (window.ChartDataLabels) {
+  Chart.register(ChartDataLabels);
+}
+
 /* =========================================================
    REFERÊNCIAS DOS ELEMENTOS DO DOM
    Centraliza todos os elementos usados no JS
@@ -15,6 +21,7 @@ const elementos = {
   formTarefa: document.getElementById("form-tarefa"),
   inputTitulo: document.getElementById("titulo"),
   inputDescricao: document.getElementById("descricao"),
+  inputPrioridade: document.getElementById("prioridade"),
 
   listaTarefas: document.getElementById("lista-tarefas"),
   btnRecarregar: document.getElementById("btn-recarregar"),
@@ -25,14 +32,21 @@ const elementos = {
   totalTarefas: document.getElementById("total-tarefas"),
   totalPendentes: document.getElementById("total-pendentes"),
   totalConcluidas: document.getElementById("total-concluidas"),
+  filtroPrioridade: document.getElementById("filtro-prioridade"),
 
   formEditarTarefa: document.getElementById("form-editar-tarefa"),
   inputEditarId: document.getElementById("editar-id"),
   inputEditarTitulo: document.getElementById("editar-titulo"),
   inputEditarDescricao: document.getElementById("editar-descricao"),
+  inputEditarPrioridade: document.getElementById("editar-prioridade"),
+
+  legendaAlta: document.getElementById("legenda-alta"),
+  legendaMedia: document.getElementById("legenda-media"),
+  legendaBaixa: document.getElementById("legenda-baixa"),
+  filtroPrioridade: document.getElementById("filtro-prioridade"),
 
   modalEditarElemento: document.getElementById("modal-editar-tarefa"),
-  mensagemEdicaoBloqueada: document.getElementById("mensagem-edicao-bloqueada")
+  mensagemEdicaoBloqueada: document.getElementById("mensagem-edicao-bloqueada"),
 };
 
 /* =========================================================
@@ -51,8 +65,9 @@ const estado = {
   timersAviso: {
     entrada: null,
     saida: null,
-    ocultar: null
-  }
+    ocultar: null,
+    prioridadeFiltro: "todas",
+  },
 };
 
 /* =========================================================
@@ -65,7 +80,7 @@ function formatarData(dataIso) {
   return new Date(dataIso).toLocaleDateString("pt-PT", {
     day: "2-digit",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   });
 }
 
@@ -88,6 +103,65 @@ function atualizarDashboard(tarefas) {
   elementos.totalTarefas.textContent = total;
   elementos.totalPendentes.textContent = pendentes;
   elementos.totalConcluidas.textContent = concluidas;
+}
+
+/* =========================================================
+   FUNÇÃO PARA GERAR GRÁFICO DE PRIORIDADES
+   ========================================================= */
+function atualizarGraficoPrioridades(tarefas) {
+  const alta = tarefas.filter(
+    (t) => normalizarPrioridade(t.prioridade) === "alta",
+  ).length;
+  const media = tarefas.filter(
+    (t) => normalizarPrioridade(t.prioridade) === "media",
+  ).length;
+  const baixa = tarefas.filter(
+    (t) => normalizarPrioridade(t.prioridade) === "baixa",
+  ).length;
+
+  elementos.legendaAlta.textContent = alta;
+  elementos.legendaMedia.textContent = media;
+  elementos.legendaBaixa.textContent = baixa;
+
+  const ctx = document.getElementById("grafico-prioridades");
+  if (!ctx) return;
+
+  if (graficoPrioridades) {
+    graficoPrioridades.destroy();
+  }
+
+  graficoPrioridades = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Alta", "Média", "Baixa"],
+      datasets: [
+        {
+          data: [alta, media, baixa],
+          backgroundColor: ["#e8c6c2", "#efe2b8", "#d8e4ef"],
+          borderColor: "#f4efe6",
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "52%",
+      plugins: {
+        legend: {
+          display: false,
+        },
+        datalabels: {
+          color: "#1f1f1f",
+          font: {
+            weight: "700",
+            size: 14,
+          },
+          formatter: (value) => (value > 0 ? value : ""),
+        },
+      },
+    },
+  });
 }
 
 /* =========================================================
@@ -140,13 +214,43 @@ function mostrarAvisoEdicaoBloqueada() {
 
 /* =========================================================
    ORDENAÇÃO INTELIGENTE
+   Prioridade Alta, Média e Baixa para tarefas
    Pendentes primeiro, concluídas depois
-   Dentro de cada grupo, mais recentes primeiro
+   Dentro de cada grupo, mais recentes primeiro.
    ========================================================= */
+function normalizarPrioridade(prioridade) {
+  const valor = (prioridade ?? "media").toString().toLowerCase();
+
+  if (valor === "alta" || valor === "media" || valor === "baixa") {
+    return valor;
+  }
+
+  return "media";
+}
+
+function obterPesoPrioridade(prioridade) {
+  const pesos = {
+    alta: 1,
+    media: 2,
+    baixa: 3,
+  };
+
+  return pesos[normalizarPrioridade(prioridade)] ?? 2;
+}
+
 function ordenarTarefas(tarefas) {
   return [...tarefas].sort((a, b) => {
     if (a.concluida !== b.concluida) {
       return a.concluida - b.concluida;
+    }
+
+    if (!a.concluida && !b.concluida) {
+      const diferencaPrioridade =
+        obterPesoPrioridade(a.prioridade) - obterPesoPrioridade(b.prioridade);
+
+      if (diferencaPrioridade !== 0) {
+        return diferencaPrioridade;
+      }
     }
 
     return b.id - a.id;
@@ -154,17 +258,30 @@ function ordenarTarefas(tarefas) {
 }
 
 /* =========================================================
-   FILTRO POR STATUS
+   FILTRO POR STATUS E PRIORIDADE
+   Pendentes, Concluídas ou Todas
+     + Filtro adicional por prioridade
    ========================================================= */
 function aplicarFiltro(tarefas) {
-  switch (estado.filtroAtual) {
-    case "pendentes":
-      return tarefas.filter((tarefa) => !tarefa.concluida);
-    case "concluidas":
-      return tarefas.filter((tarefa) => tarefa.concluida);
-    default:
-      return tarefas;
+  let resultado = tarefas;
+
+  if (estado.filtroAtual === "pendentes") {
+    resultado = resultado.filter((tarefa) => !tarefa.concluida);
   }
+
+  if (estado.filtroAtual === "concluidas") {
+    resultado = resultado.filter((tarefa) => tarefa.concluida);
+  }
+
+  if (estado.prioridadeFiltro !== "todas") {
+    resultado = resultado.filter((tarefa) => {
+      return (
+        normalizarPrioridade(tarefa.prioridade) === estado.prioridadeFiltro
+      );
+    });
+  }
+
+  return resultado;
 }
 
 /* =========================================================
@@ -215,7 +332,9 @@ function gerarBotaoConclusao(tarefa) {
     : "btn-outline-success";
 
   const textoBotao = tarefa.concluida ? "Reabrir" : "Concluir";
-  const icone = tarefa.concluida ? "bi-arrow-counterclockwise" : "bi-check2-circle";
+  const icone = tarefa.concluida
+    ? "bi-arrow-counterclockwise"
+    : "bi-check2-circle";
 
   return `
     <button
@@ -244,17 +363,50 @@ function gerarBotaoApagar(tarefa) {
 /* =========================================================
    HTML DE CADA TAREFA
    ========================================================= */
+
+function gerarBadgePrioridade(prioridade) {
+  const prioridadeNormalizada = normalizarPrioridade(prioridade);
+
+  const configuracao = {
+    alta: {
+      classe: "badge-prioridade badge-alta",
+      texto: "Alta",
+    },
+    media: {
+      classe: "badge-prioridade badge-media",
+      texto: "Média",
+    },
+    baixa: {
+      classe: "badge-prioridade badge-baixa",
+      texto: "Baixa",
+    },
+  };
+
+  const badge = configuracao[prioridadeNormalizada] ?? configuracao.media;
+
+  return `<span class="${badge.classe}">${badge.texto}</span>`;
+}
+
 function gerarHtmlTarefa(tarefa) {
   return `
-    <li class="list-group-item ${tarefa.concluida ? "tarefa-concluida" : ""}">
+    <li class="list-group-item 
+      ${tarefa.concluida ? "tarefa-concluida" : ""} 
+      ${tarefa.prioridade === "alta" && !tarefa.concluida ? "tarefa-alta" : ""}
+    ">
       <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div class="flex-grow-1">
-          <div class="fw-bold titulo-tarefa">${tarefa.titulo}</div>
+          <div class="fw-bold titulo-tarefa mb-2">${tarefa.titulo}</div>
           <div class="tarefa-descricao mb-2">${tarefa.descricao ?? ""}</div>
 
           <div class="tarefa-meta d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-1 gap-sm-0">
-            <span>Estado: ${tarefa.concluida ? "Concluída" : "Pendente"}</span>
+            <span>${gerarBadgePrioridade(tarefa.prioridade)}</span>
+
             <span class="d-none d-sm-inline mx-2">|</span>
+
+            <span>Estado: ${tarefa.concluida ? "Concluída" : "Pendente"}</span>
+
+            <span class="d-none d-sm-inline mx-2">|</span>
+
             <span>Criada em ${formatarData(tarefa.created_at)}</span>
           </div>
         </div>
@@ -322,6 +474,7 @@ function prepararTarefasParaExibicao() {
   atualizarBotoesFiltro();
   atualizarContador(estado.tarefasCache.length);
   atualizarDashboard(estado.tarefasCache);
+  atualizarGraficoPrioridades(estado.tarefasCache);
 }
 
 /* =========================================================
@@ -353,21 +506,21 @@ async function criarTarefa(event) {
 
   const titulo = elementos.inputTitulo.value.trim();
   const descricao = elementos.inputDescricao.value.trim();
+  const prioridade = elementos.inputPrioridade.value;
 
   if (!titulo) {
     alert("O título é obrigatório.");
     return;
   }
 
-  const { error } = await client
-    .from("tarefas")
-    .insert([
-      {
-        titulo,
-        descricao,
-        concluida: false
-      }
-    ]);
+  const { error } = await client.from("tarefas").insert([
+    {
+      titulo,
+      descricao,
+      prioridade,
+      concluida: false,
+    },
+  ]);
 
   if (error) {
     console.error("Erro ao guardar tarefa:", error);
@@ -398,6 +551,7 @@ function abrirEdicao(id) {
   elementos.inputEditarId.value = tarefa.id;
   elementos.inputEditarTitulo.value = tarefa.titulo;
   elementos.inputEditarDescricao.value = tarefa.descricao ?? "";
+  elementos.inputEditarPrioridade.value = tarefa.prioridade ?? "media";
   modalEditar.show();
 }
 
@@ -410,6 +564,7 @@ async function guardarEdicao(event) {
   const id = Number(elementos.inputEditarId.value);
   const titulo = elementos.inputEditarTitulo.value.trim();
   const descricao = elementos.inputEditarDescricao.value.trim();
+  const prioridade = elementos.inputEditarPrioridade.value;
 
   if (!titulo) {
     alert("O título é obrigatório.");
@@ -418,7 +573,7 @@ async function guardarEdicao(event) {
 
   const { error } = await client
     .from("tarefas")
-    .update({ titulo, descricao })
+    .update({ titulo, descricao, prioridade })
     .eq("id", id);
 
   if (error) {
@@ -457,10 +612,7 @@ async function apagarTarefa(id) {
 
   if (!confirmar) return;
 
-  const { error } = await client
-    .from("tarefas")
-    .delete()
-    .eq("id", id);
+  const { error } = await client.from("tarefas").delete().eq("id", id);
 
   if (error) {
     console.error("Erro ao apagar tarefa:", error);
@@ -522,6 +674,11 @@ function configurarEventos() {
     prepararTarefasParaExibicao();
   });
 
+  elementos.filtroPrioridade.addEventListener("change", (event) => {
+    estado.prioridadeFiltro = event.target.value;
+    prepararTarefasParaExibicao();
+  });
+
   elementos.formTarefa.addEventListener("submit", criarTarefa);
   elementos.formEditarTarefa.addEventListener("submit", guardarEdicao);
   elementos.btnRecarregar.addEventListener("click", carregarTarefas);
@@ -533,6 +690,18 @@ function configurarEventos() {
    ========================================================= */
 function inicializar() {
   configurarEventos();
+
+  estado.prioridadeFiltro = "todas";
+  estado.termoBusca = "";
+
+  if (elementos.filtroPrioridade) {
+    elementos.filtroPrioridade.value = "todas";
+  }
+
+  if (elementos.inputBusca) {
+    elementos.inputBusca.value = "";
+  }
+
   carregarTarefas();
 }
 
