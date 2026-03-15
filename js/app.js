@@ -1,33 +1,40 @@
-console.log("App carregada com sucesso!");
-
 const SUPABASE_URL = "https://xrtmhxpyvqvrjlwtyakv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_C2SR6u5i0KpIQdozqFJEdg_ij2IbLsg";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const formTarefa = document.getElementById("form-tarefa");
-const inputTitulo = document.getElementById("titulo");
-const inputDescricao = document.getElementById("descricao");
-const listaTarefas = document.getElementById("lista-tarefas");
-const btnRecarregar = document.getElementById("btn-recarregar");
-const contadorTarefas = document.getElementById("contador-tarefas");
-const botoesFiltro = document.querySelectorAll(".filtro-btn");
+const elementos = {
+  formTarefa: document.getElementById("form-tarefa"),
+  inputTitulo: document.getElementById("titulo"),
+  inputDescricao: document.getElementById("descricao"),
+  listaTarefas: document.getElementById("lista-tarefas"),
+  btnRecarregar: document.getElementById("btn-recarregar"),
+  contadorTarefas: document.getElementById("contador-tarefas"),
+  botoesFiltro: document.querySelectorAll(".filtro-btn"),
 
-const formEditarTarefa = document.getElementById("form-editar-tarefa");
-const inputEditarId = document.getElementById("editar-id");
-const inputEditarTitulo = document.getElementById("editar-titulo");
-const inputEditarDescricao = document.getElementById("editar-descricao");
+  formEditarTarefa: document.getElementById("form-editar-tarefa"),
+  inputEditarId: document.getElementById("editar-id"),
+  inputEditarTitulo: document.getElementById("editar-titulo"),
+  inputEditarDescricao: document.getElementById("editar-descricao"),
 
-const modalEditarElemento = document.getElementById("modal-editar-tarefa");
-const modalEditar = new bootstrap.Modal(modalEditarElemento);
+  modalEditarElemento: document.getElementById("modal-editar-tarefa"),
+  mensagemEdicaoBloqueada: document.getElementById("mensagem-edicao-bloqueada")
+};
 
-let filtroAtual = "todas";
-let tarefasCache = [];
+const modalEditar = new bootstrap.Modal(elementos.modalEditarElemento);
+
+const estado = {
+  filtroAtual: "todas",
+  tarefasCache: [],
+  timersAviso: {
+    entrada: null,
+    saida: null,
+    ocultar: null
+  }
+};
 
 function formatarData(dataIso) {
-  if (!dataIso) {
-    return "Desconhecida";
-  }
+  if (!dataIso) return "Desconhecida";
 
   return new Date(dataIso).toLocaleDateString("pt-PT", {
     day: "2-digit",
@@ -37,33 +44,108 @@ function formatarData(dataIso) {
 }
 
 function atualizarContador(total) {
-  contadorTarefas.textContent = `${total} ${total === 1 ? "tarefa" : "tarefas"}`;
+  elementos.contadorTarefas.textContent = `${total} ${total === 1 ? "tarefa" : "tarefas"}`;
 }
 
 function atualizarBotoesFiltro() {
-  botoesFiltro.forEach((botao) => {
-    const filtroBotao = botao.dataset.filtro;
-
-    if (filtroBotao === filtroAtual) {
-      botao.classList.remove("btn-outline-dark");
-      botao.classList.add("btn-dark");
-    } else {
-      botao.classList.remove("btn-dark");
-      botao.classList.add("btn-outline-dark");
-    }
+  elementos.botoesFiltro.forEach((botao) => {
+    const ativo = botao.dataset.filtro === estado.filtroAtual;
+    botao.classList.toggle("btn-dark", ativo);
+    botao.classList.toggle("btn-outline-dark", !ativo);
   });
 }
 
 function aplicarFiltro(tarefas) {
-  if (filtroAtual === "pendentes") {
-    return tarefas.filter((tarefa) => !tarefa.concluida);
+  switch (estado.filtroAtual) {
+    case "pendentes":
+      return tarefas.filter((tarefa) => !tarefa.concluida);
+    case "concluidas":
+      return tarefas.filter((tarefa) => tarefa.concluida);
+    default:
+      return tarefas;
   }
+}
 
-  if (filtroAtual === "concluidas") {
-    return tarefas.filter((tarefa) => tarefa.concluida);
-  }
+function obterTarefaPorId(id) {
+  return estado.tarefasCache.find((item) => item.id === id);
+}
 
-  return tarefas;
+function mostrarAvisoEdicaoBloqueada() {
+  const aviso = elementos.mensagemEdicaoBloqueada;
+  const { timersAviso } = estado;
+
+  clearTimeout(timersAviso.entrada);
+  clearTimeout(timersAviso.saida);
+  clearTimeout(timersAviso.ocultar);
+
+  aviso.classList.remove("d-none", "saindo", "visivel");
+
+  timersAviso.entrada = setTimeout(() => {
+    aviso.classList.add("visivel");
+  }, 10);
+
+  timersAviso.saida = setTimeout(() => {
+    aviso.classList.remove("visivel");
+    aviso.classList.add("saindo");
+
+    timersAviso.ocultar = setTimeout(() => {
+      aviso.classList.add("d-none");
+      aviso.classList.remove("saindo");
+    }, 600);
+  }, 5000);
+}
+
+function gerarBotaoEditar(tarefa) {
+  const titulo = tarefa.concluida
+    ? "Reabra a tarefa para editar"
+    : "Editar tarefa";
+
+  const classeBotao = tarefa.concluida
+    ? "btn-outline-secondary"
+    : "btn-outline-primary";
+
+  return `
+    <span title="${titulo}">
+      <button
+        class="btn btn-sm ${classeBotao}"
+        data-action="editar"
+        data-id="${tarefa.id}"
+      >
+        Editar
+      </button>
+    </span>
+  `;
+}
+
+function gerarBotaoConclusao(tarefa) {
+  const classeBotao = tarefa.concluida
+    ? "btn-outline-warning"
+    : "btn-outline-success";
+
+  const textoBotao = tarefa.concluida ? "Reabrir" : "Concluir";
+
+  return `
+    <button
+      class="btn btn-sm ${classeBotao}"
+      data-action="concluir"
+      data-id="${tarefa.id}"
+      data-concluida="${tarefa.concluida}"
+    >
+      ${textoBotao}
+    </button>
+  `;
+}
+
+function gerarBotaoApagar(tarefa) {
+  return `
+    <button
+      class="btn btn-sm btn-outline-danger"
+      data-action="apagar"
+      data-id="${tarefa.id}"
+    >
+      Apagar
+    </button>
+  `;
 }
 
 function gerarHtmlTarefa(tarefa) {
@@ -82,56 +164,48 @@ function gerarHtmlTarefa(tarefa) {
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-          <span title="${tarefa.concluida ? "Reabra a tarefa para editar" : "Editar tarefa"}">
-            <button
-              class="btn btn-sm ${tarefa.concluida ? "btn-outline-secondary" : "btn-outline-primary"}"
-              onclick="${tarefa.concluida ? "mostrarMensagemEdicao()" : `abrirEdicao(${tarefa.id})`}"
-            >
-              Editar
-            </button>
-          </span>
-
-          <button
-            class="btn btn-sm ${tarefa.concluida ? "btn-outline-warning" : "btn-outline-success"}"
-            onclick="alternarConclusao(${tarefa.id}, ${tarefa.concluida})"
-          >
-            ${tarefa.concluida ? "Reabrir" : "Concluir"}
-          </button>
-
-          <button
-            class="btn btn-sm btn-outline-danger"
-            onclick="apagarTarefa(${tarefa.id})"
-          >
-            Apagar
-          </button>
+          ${gerarBotaoEditar(tarefa)}
+          ${gerarBotaoConclusao(tarefa)}
+          ${gerarBotaoApagar(tarefa)}
         </div>
       </div>
     </li>
   `;
 }
 
-function mostrarMensagemEdicao() {
-  alert("Esta tarefa está concluída. Reabra a tarefa para poder editar.");
+function renderizarEstadoVazio() {
+  elementos.listaTarefas.innerHTML = `
+    <li class="list-group-item text-muted">
+      Nenhuma tarefa encontrada neste filtro.
+    </li>
+  `;
+}
+
+function renderizarEstadoCarregando() {
+  elementos.listaTarefas.innerHTML = `
+    <li class="list-group-item">A carregar tarefas...</li>
+  `;
+}
+
+function renderizarEstadoErro(mensagem) {
+  elementos.listaTarefas.innerHTML = `
+    <li class="list-group-item text-danger">
+      Erro ao carregar: ${mensagem}
+    </li>
+  `;
 }
 
 function renderizarTarefas(tarefas) {
   if (!tarefas || tarefas.length === 0) {
-    listaTarefas.innerHTML = `
-      <li class="list-group-item text-muted">
-        Nenhuma tarefa encontrada neste filtro.
-      </li>
-    `;
+    renderizarEstadoVazio();
     return;
   }
 
-  const html = tarefas.map((tarefa) => gerarHtmlTarefa(tarefa)).join("");
-  listaTarefas.innerHTML = html;
+  elementos.listaTarefas.innerHTML = tarefas.map(gerarHtmlTarefa).join("");
 }
 
 async function carregarTarefas() {
-  listaTarefas.innerHTML = `
-    <li class="list-group-item">A carregar tarefas...</li>
-  `;
+  renderizarEstadoCarregando();
 
   const { data, error } = await client
     .from("tarefas")
@@ -140,28 +214,21 @@ async function carregarTarefas() {
 
   if (error) {
     console.error("Erro ao carregar tarefas:", error);
-    listaTarefas.innerHTML = `
-      <li class="list-group-item text-danger">
-        Erro ao carregar: ${error.message}
-      </li>
-    `;
+    renderizarEstadoErro(error.message);
     return;
   }
 
-  tarefasCache = data;
-
+  estado.tarefasCache = data;
   atualizarContador(data.length);
-
-  const tarefasFiltradas = aplicarFiltro(data);
-  renderizarTarefas(tarefasFiltradas);
   atualizarBotoesFiltro();
+  renderizarTarefas(aplicarFiltro(data));
 }
 
 async function criarTarefa(event) {
   event.preventDefault();
 
-  const titulo = inputTitulo.value.trim();
-  const descricao = inputDescricao.value.trim();
+  const titulo = elementos.inputTitulo.value.trim();
+  const descricao = elementos.inputDescricao.value.trim();
 
   if (!titulo) {
     alert("O título é obrigatório.");
@@ -184,12 +251,12 @@ async function criarTarefa(event) {
     return;
   }
 
-  formTarefa.reset();
-  carregarTarefas();
+  elementos.formTarefa.reset();
+  await carregarTarefas();
 }
 
 function abrirEdicao(id) {
-  const tarefa = tarefasCache.find((item) => item.id === id);
+  const tarefa = obterTarefaPorId(id);
 
   if (!tarefa) {
     alert("Tarefa não encontrada.");
@@ -197,22 +264,22 @@ function abrirEdicao(id) {
   }
 
   if (tarefa.concluida) {
-    alert("Reabra a tarefa antes de editar.");
+    mostrarAvisoEdicaoBloqueada();
     return;
   }
 
-  inputEditarId.value = tarefa.id;
-  inputEditarTitulo.value = tarefa.titulo;
-  inputEditarDescricao.value = tarefa.descricao ?? "";
+  elementos.inputEditarId.value = tarefa.id;
+  elementos.inputEditarTitulo.value = tarefa.titulo;
+  elementos.inputEditarDescricao.value = tarefa.descricao ?? "";
   modalEditar.show();
 }
 
 async function guardarEdicao(event) {
   event.preventDefault();
 
-  const id = Number(inputEditarId.value);
-  const titulo = inputEditarTitulo.value.trim();
-  const descricao = inputEditarDescricao.value.trim();
+  const id = Number(elementos.inputEditarId.value);
+  const titulo = elementos.inputEditarTitulo.value.trim();
+  const descricao = elementos.inputEditarDescricao.value.trim();
 
   if (!titulo) {
     alert("O título é obrigatório.");
@@ -221,10 +288,7 @@ async function guardarEdicao(event) {
 
   const { error } = await client
     .from("tarefas")
-    .update({
-      titulo,
-      descricao
-    })
+    .update({ titulo, descricao })
     .eq("id", id);
 
   if (error) {
@@ -234,7 +298,7 @@ async function guardarEdicao(event) {
   }
 
   modalEditar.hide();
-  carregarTarefas();
+  await carregarTarefas();
 }
 
 async function alternarConclusao(id, estadoAtual) {
@@ -249,15 +313,13 @@ async function alternarConclusao(id, estadoAtual) {
     return;
   }
 
-  carregarTarefas();
+  await carregarTarefas();
 }
 
 async function apagarTarefa(id) {
   const confirmar = confirm("Deseja realmente apagar esta tarefa?");
 
-  if (!confirmar) {
-    return;
-  }
+  if (!confirmar) return;
 
   const { error } = await client
     .from("tarefas")
@@ -270,22 +332,57 @@ async function apagarTarefa(id) {
     return;
   }
 
+  await carregarTarefas();
+}
+
+async function tratarCliqueLista(event) {
+  const botao = event.target.closest("button[data-action]");
+
+  if (!botao) return;
+
+  const acao = botao.dataset.action;
+  const id = Number(botao.dataset.id);
+
+  if (acao === "editar") {
+    const tarefa = obterTarefaPorId(id);
+
+    if (tarefa?.concluida) {
+      mostrarAvisoEdicaoBloqueada();
+      return;
+    }
+
+    abrirEdicao(id);
+    return;
+  }
+
+  if (acao === "concluir") {
+    const concluida = botao.dataset.concluida === "true";
+    await alternarConclusao(id, concluida);
+    return;
+  }
+
+  if (acao === "apagar") {
+    await apagarTarefa(id);
+  }
+}
+
+function configurarEventos() {
+  elementos.botoesFiltro.forEach((botao) => {
+    botao.addEventListener("click", () => {
+      estado.filtroAtual = botao.dataset.filtro;
+      carregarTarefas();
+    });
+  });
+
+  elementos.formTarefa.addEventListener("submit", criarTarefa);
+  elementos.formEditarTarefa.addEventListener("submit", guardarEdicao);
+  elementos.btnRecarregar.addEventListener("click", carregarTarefas);
+  elementos.listaTarefas.addEventListener("click", tratarCliqueLista);
+}
+
+function inicializar() {
+  configurarEventos();
   carregarTarefas();
 }
 
-botoesFiltro.forEach((botao) => {
-  botao.addEventListener("click", () => {
-    filtroAtual = botao.dataset.filtro;
-    carregarTarefas();
-  });
-});
-
-formTarefa.addEventListener("submit", criarTarefa);
-formEditarTarefa.addEventListener("submit", guardarEdicao);
-btnRecarregar.addEventListener("click", carregarTarefas);
-
-carregarTarefas();
-
-window.abrirEdicao = abrirEdicao;
-window.alternarConclusao = alternarConclusao;
-window.apagarTarefa = apagarTarefa;
+inicializar();

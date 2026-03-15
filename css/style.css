@@ -47,3 +47,17 @@ button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.alerta-edicao {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  border-radius: 12px;
+}
+
+.alerta-edicao.visivel {
+  opacity: 1;
+}
+
+.alerta-edicao.saindo {
+  opacity: 0;
+}
