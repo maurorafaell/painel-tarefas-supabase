@@ -1,16 +1,30 @@
+/* =========================================================
+   CONFIGURAÇÃO DO SUPABASE
+   URL e chave pública do projeto
+   ========================================================= */
 const SUPABASE_URL = "https://xrtmhxpyvqvrjlwtyakv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_C2SR6u5i0KpIQdozqFJEdg_ij2IbLsg";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* =========================================================
+   REFERÊNCIAS DOS ELEMENTOS DO DOM
+   Centraliza todos os elementos usados no JS
+   ========================================================= */
 const elementos = {
   formTarefa: document.getElementById("form-tarefa"),
   inputTitulo: document.getElementById("titulo"),
   inputDescricao: document.getElementById("descricao"),
+
   listaTarefas: document.getElementById("lista-tarefas"),
   btnRecarregar: document.getElementById("btn-recarregar"),
   contadorTarefas: document.getElementById("contador-tarefas"),
   botoesFiltro: document.querySelectorAll(".filtro-btn"),
+  inputBusca: document.getElementById("input-busca"),
+
+  totalTarefas: document.getElementById("total-tarefas"),
+  totalPendentes: document.getElementById("total-pendentes"),
+  totalConcluidas: document.getElementById("total-concluidas"),
 
   formEditarTarefa: document.getElementById("form-editar-tarefa"),
   inputEditarId: document.getElementById("editar-id"),
@@ -21,10 +35,18 @@ const elementos = {
   mensagemEdicaoBloqueada: document.getElementById("mensagem-edicao-bloqueada")
 };
 
+/* =========================================================
+   INSTÂNCIA DO MODAL BOOTSTRAP
+   ========================================================= */
 const modalEditar = new bootstrap.Modal(elementos.modalEditarElemento);
 
+/* =========================================================
+   ESTADO GLOBAL DA APLICAÇÃO
+   Guarda filtro atual, busca e cache das tarefas
+   ========================================================= */
 const estado = {
   filtroAtual: "todas",
+  termoBusca: "",
   tarefasCache: [],
   timersAviso: {
     entrada: null,
@@ -33,6 +55,10 @@ const estado = {
   }
 };
 
+/* =========================================================
+   FUNÇÃO DE FORMATAÇÃO DE DATA
+   Recebe ISO e devolve data mais amigável
+   ========================================================= */
 function formatarData(dataIso) {
   if (!dataIso) return "Desconhecida";
 
@@ -43,10 +69,30 @@ function formatarData(dataIso) {
   });
 }
 
+/* =========================================================
+   FUNÇÃO PARA ATUALIZAR O BADGE DO TOPO
+   ========================================================= */
 function atualizarContador(total) {
   elementos.contadorTarefas.textContent = `${total} ${total === 1 ? "tarefa" : "tarefas"}`;
 }
 
+/* =========================================================
+   FUNÇÃO PARA ATUALIZAR O DASHBOARD
+   Mostra totais no topo da página
+   ========================================================= */
+function atualizarDashboard(tarefas) {
+  const total = tarefas.length;
+  const pendentes = tarefas.filter((tarefa) => !tarefa.concluida).length;
+  const concluidas = tarefas.filter((tarefa) => tarefa.concluida).length;
+
+  elementos.totalTarefas.textContent = total;
+  elementos.totalPendentes.textContent = pendentes;
+  elementos.totalConcluidas.textContent = concluidas;
+}
+
+/* =========================================================
+   FUNÇÃO PARA DESTACAR O FILTRO ATIVO
+   ========================================================= */
 function atualizarBotoesFiltro() {
   elementos.botoesFiltro.forEach((botao) => {
     const ativo = botao.dataset.filtro === estado.filtroAtual;
@@ -55,21 +101,18 @@ function atualizarBotoesFiltro() {
   });
 }
 
-function aplicarFiltro(tarefas) {
-  switch (estado.filtroAtual) {
-    case "pendentes":
-      return tarefas.filter((tarefa) => !tarefa.concluida);
-    case "concluidas":
-      return tarefas.filter((tarefa) => tarefa.concluida);
-    default:
-      return tarefas;
-  }
-}
-
+/* =========================================================
+   BUSCA DA TAREFA PELO ID
+   Usa o cache carregado da API
+   ========================================================= */
 function obterTarefaPorId(id) {
   return estado.tarefasCache.find((item) => item.id === id);
 }
 
+/* =========================================================
+   ALERTA VISUAL PARA EDIÇÃO BLOQUEADA
+   Usado quando a tarefa está concluída
+   ========================================================= */
 function mostrarAvisoEdicaoBloqueada() {
   const aviso = elementos.mensagemEdicaoBloqueada;
   const { timersAviso } = estado;
@@ -95,6 +138,55 @@ function mostrarAvisoEdicaoBloqueada() {
   }, 5000);
 }
 
+/* =========================================================
+   ORDENAÇÃO INTELIGENTE
+   Pendentes primeiro, concluídas depois
+   Dentro de cada grupo, mais recentes primeiro
+   ========================================================= */
+function ordenarTarefas(tarefas) {
+  return [...tarefas].sort((a, b) => {
+    if (a.concluida !== b.concluida) {
+      return a.concluida - b.concluida;
+    }
+
+    return b.id - a.id;
+  });
+}
+
+/* =========================================================
+   FILTRO POR STATUS
+   ========================================================= */
+function aplicarFiltro(tarefas) {
+  switch (estado.filtroAtual) {
+    case "pendentes":
+      return tarefas.filter((tarefa) => !tarefa.concluida);
+    case "concluidas":
+      return tarefas.filter((tarefa) => tarefa.concluida);
+    default:
+      return tarefas;
+  }
+}
+
+/* =========================================================
+   FILTRO POR TEXTO DE BUSCA
+   Pesquisa em título e descrição
+   ========================================================= */
+function aplicarBusca(tarefas) {
+  const termo = estado.termoBusca.trim().toLowerCase();
+
+  if (!termo) return tarefas;
+
+  return tarefas.filter((tarefa) => {
+    const titulo = (tarefa.titulo ?? "").toLowerCase();
+    const descricao = (tarefa.descricao ?? "").toLowerCase();
+
+    return titulo.includes(termo) || descricao.includes(termo);
+  });
+}
+
+/* =========================================================
+   CRIAÇÃO DOS BOTÕES INDIVIDUAIS
+   ========================================================= */
 function gerarBotaoEditar(tarefa) {
   const titulo = tarefa.concluida
     ? "Reabra a tarefa para editar"
@@ -111,7 +203,7 @@ function gerarBotaoEditar(tarefa) {
         data-action="editar"
         data-id="${tarefa.id}"
       >
-        Editar
+        <i class="bi bi-pencil-square me-1"></i>Editar
       </button>
     </span>
   `;
@@ -123,6 +215,7 @@ function gerarBotaoConclusao(tarefa) {
     : "btn-outline-success";
 
   const textoBotao = tarefa.concluida ? "Reabrir" : "Concluir";
+  const icone = tarefa.concluida ? "bi-arrow-counterclockwise" : "bi-check2-circle";
 
   return `
     <button
@@ -131,7 +224,7 @@ function gerarBotaoConclusao(tarefa) {
       data-id="${tarefa.id}"
       data-concluida="${tarefa.concluida}"
     >
-      ${textoBotao}
+      <i class="bi ${icone} me-1"></i>${textoBotao}
     </button>
   `;
 }
@@ -143,11 +236,14 @@ function gerarBotaoApagar(tarefa) {
       data-action="apagar"
       data-id="${tarefa.id}"
     >
-      Apagar
+      <i class="bi bi-trash3 me-1"></i>Apagar
     </button>
   `;
 }
 
+/* =========================================================
+   HTML DE CADA TAREFA
+   ========================================================= */
 function gerarHtmlTarefa(tarefa) {
   return `
     <li class="list-group-item ${tarefa.concluida ? "tarefa-concluida" : ""}">
@@ -173,10 +269,13 @@ function gerarHtmlTarefa(tarefa) {
   `;
 }
 
+/* =========================================================
+   ESTADOS VISUAIS DA LISTA
+   ========================================================= */
 function renderizarEstadoVazio() {
   elementos.listaTarefas.innerHTML = `
     <li class="list-group-item text-muted">
-      Nenhuma tarefa encontrada neste filtro.
+      Nenhuma tarefa encontrada para os filtros atuais.
     </li>
   `;
 }
@@ -195,6 +294,9 @@ function renderizarEstadoErro(mensagem) {
   `;
 }
 
+/* =========================================================
+   RENDERIZAÇÃO FINAL DAS TAREFAS
+   ========================================================= */
 function renderizarTarefas(tarefas) {
   if (!tarefas || tarefas.length === 0) {
     renderizarEstadoVazio();
@@ -204,6 +306,27 @@ function renderizarTarefas(tarefas) {
   elementos.listaTarefas.innerHTML = tarefas.map(gerarHtmlTarefa).join("");
 }
 
+/* =========================================================
+   PREPARAÇÃO COMPLETA DOS DADOS PARA EXIBIÇÃO
+   Ordem:
+   1. ordenar
+   2. filtrar por status
+   3. filtrar por busca
+   ========================================================= */
+function prepararTarefasParaExibicao() {
+  const tarefasOrdenadas = ordenarTarefas(estado.tarefasCache);
+  const tarefasFiltradas = aplicarFiltro(tarefasOrdenadas);
+  const tarefasBuscadas = aplicarBusca(tarefasFiltradas);
+
+  renderizarTarefas(tarefasBuscadas);
+  atualizarBotoesFiltro();
+  atualizarContador(estado.tarefasCache.length);
+  atualizarDashboard(estado.tarefasCache);
+}
+
+/* =========================================================
+   CARREGAR TAREFAS DO SUPABASE
+   ========================================================= */
 async function carregarTarefas() {
   renderizarEstadoCarregando();
 
@@ -219,11 +342,12 @@ async function carregarTarefas() {
   }
 
   estado.tarefasCache = data;
-  atualizarContador(data.length);
-  atualizarBotoesFiltro();
-  renderizarTarefas(aplicarFiltro(data));
+  prepararTarefasParaExibicao();
 }
 
+/* =========================================================
+   CRIAR NOVA TAREFA
+   ========================================================= */
 async function criarTarefa(event) {
   event.preventDefault();
 
@@ -255,6 +379,9 @@ async function criarTarefa(event) {
   await carregarTarefas();
 }
 
+/* =========================================================
+   ABRIR MODAL DE EDIÇÃO
+   ========================================================= */
 function abrirEdicao(id) {
   const tarefa = obterTarefaPorId(id);
 
@@ -274,6 +401,9 @@ function abrirEdicao(id) {
   modalEditar.show();
 }
 
+/* =========================================================
+   GUARDAR EDIÇÃO
+   ========================================================= */
 async function guardarEdicao(event) {
   event.preventDefault();
 
@@ -301,6 +431,9 @@ async function guardarEdicao(event) {
   await carregarTarefas();
 }
 
+/* =========================================================
+   CONCLUIR / REABRIR TAREFA
+   ========================================================= */
 async function alternarConclusao(id, estadoAtual) {
   const { error } = await client
     .from("tarefas")
@@ -316,6 +449,9 @@ async function alternarConclusao(id, estadoAtual) {
   await carregarTarefas();
 }
 
+/* =========================================================
+   APAGAR TAREFA
+   ========================================================= */
 async function apagarTarefa(id) {
   const confirmar = confirm("Deseja realmente apagar esta tarefa?");
 
@@ -335,6 +471,10 @@ async function apagarTarefa(id) {
   await carregarTarefas();
 }
 
+/* =========================================================
+   TRATAR CLIQUES NA LISTA
+   Usa delegação de eventos para os botões
+   ========================================================= */
 async function tratarCliqueLista(event) {
   const botao = event.target.closest("button[data-action]");
 
@@ -366,12 +506,20 @@ async function tratarCliqueLista(event) {
   }
 }
 
+/* =========================================================
+   CONFIGURAÇÃO DOS EVENTOS DA APLICAÇÃO
+   ========================================================= */
 function configurarEventos() {
   elementos.botoesFiltro.forEach((botao) => {
     botao.addEventListener("click", () => {
       estado.filtroAtual = botao.dataset.filtro;
-      carregarTarefas();
+      prepararTarefasParaExibicao();
     });
+  });
+
+  elementos.inputBusca.addEventListener("input", (event) => {
+    estado.termoBusca = event.target.value;
+    prepararTarefasParaExibicao();
   });
 
   elementos.formTarefa.addEventListener("submit", criarTarefa);
@@ -380,6 +528,9 @@ function configurarEventos() {
   elementos.listaTarefas.addEventListener("click", tratarCliqueLista);
 }
 
+/* =========================================================
+   INICIALIZAÇÃO DA APLICAÇÃO
+   ========================================================= */
 function inicializar() {
   configurarEventos();
   carregarTarefas();

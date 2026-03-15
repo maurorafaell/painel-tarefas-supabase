@@ -1,38 +1,157 @@
+/* =========================================================
+   CONFIGURAÇÃO GERAL DO BODY
+   Fundo editorial inspirado em estética premium/academic
+   ========================================================= */
 body {
-  background: linear-gradient(180deg, #f8f9fa 0%, #eef2f7 100%);
+  background: linear-gradient(180deg, #e9e2d3 0%, #ece5d8 100%);
   min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: #1f1f1f;
 }
 
-.card {
-  border-radius: 18px;
+/* =========================================================
+   TIPOGRAFIA PRINCIPAL
+   ========================================================= */
+.navbar-brand,
+.titulo-secao,
+.dashboard-value {
+  font-family: "Playfair Display", serif;
 }
 
 .navbar-brand {
   letter-spacing: 0.3px;
+  font-size: 2rem;
+  display: block;
 }
 
+/* Subtítulo discreto abaixo da marca */
+.subtitulo-app {
+  font-size: 0.95rem;
+  color: #6b675e;
+  margin-top: -4px;
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+.navbar-app {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(8px);
+}
+
+.badge-total {
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+}
+
+/* =========================================================
+   CARDS GERAIS
+   ========================================================= */
+.card {
+  border-radius: 18px;
+  background: #f4efe6;
+  border: 1px solid #d7cfbd !important;
+  box-shadow: 0 6px 18px rgba(48, 41, 30, 0.06) !important;
+}
+
+/* =========================================================
+   TEXTOS DE APOIO
+   ========================================================= */
+.texto-suporte {
+  color: #6c675c;
+  font-size: 0.95rem;
+}
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+.card-dashboard {
+  min-height: 130px;
+}
+
+.dashboard-label {
+  font-size: 0.95rem;
+  color: #6c675c;
+  margin-bottom: 0.6rem;
+}
+
+.dashboard-value {
+  font-size: 2.3rem;
+  line-height: 1;
+  color: #1f1f1f;
+}
+
+/* =========================================================
+   FORMULÁRIOS
+   ========================================================= */
+.form-label {
+  font-weight: 600;
+  color: #39352e;
+}
+
+.form-control,
+.input-group-text {
+  border-radius: 12px !important;
+  border: 1px solid #d3cab8 !important;
+  background-color: #fcfaf5 !important;
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 0.2rem rgba(43, 108, 176, 0.12) !important;
+  border-color: #7da8d4 !important;
+}
+
+/* =========================================================
+   BOTÕES
+   ========================================================= */
+.btn {
+  border-radius: 12px;
+}
+
+.btn-primary {
+  background-color: #2b6cb0;
+  border-color: #2b6cb0;
+}
+
+.btn-primary:hover {
+  background-color: #245d9a;
+  border-color: #245d9a;
+}
+
+/* =========================================================
+   LISTA DE TAREFAS
+   ========================================================= */
 .lista-tarefas .list-group-item {
   border: none;
   border-radius: 14px !important;
   margin-bottom: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  background: #fcfaf5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.035);
 }
 
+/* Tarefa concluída */
 .tarefa-concluida .titulo-tarefa {
   text-decoration: line-through;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
+/* Descrição da tarefa */
 .tarefa-descricao {
-  color: #6c757d;
+  color: #6c675c;
+  line-height: 1.5;
 }
 
+/* Metadados da tarefa */
 .tarefa-meta {
   font-size: 0.875rem;
-  color: #707172c5;
+  color: #7a756d;
   line-height: 1.4;
 }
 
+/* =========================================================
+   BOTÃO RECARREGAR NO MOBILE
+   ========================================================= */
 @media (max-width: 576px) {
   #btn-recarregar {
     width: 42px;
@@ -43,11 +162,18 @@ body {
   }
 }
 
+/* =========================================================
+   ESTADO DE BOTÃO DESABILITADO
+   ========================================================= */
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* =========================================================
+   ALERTA DE EDIÇÃO BLOQUEADA
+   Aparece e desaparece suavemente
+   ========================================================= */
 .alerta-edicao {
   opacity: 0;
   transition: opacity 0.6s ease;
@@ -60,4 +186,17 @@ button:disabled {
 
 .alerta-edicao.saindo {
   opacity: 0;
+}
+
+/* =========================================================
+   AJUSTES RESPONSIVOS
+   ========================================================= */
+@media (max-width: 768px) {
+  .navbar-brand {
+    font-size: 1.75rem;
+  }
+
+  .dashboard-value {
+    font-size: 2rem;
+  }
 }
