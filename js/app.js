@@ -19,6 +19,9 @@ if (window.ChartDataLabels) {
    ========================================================= */
 const elementos = {
   formTarefa: document.getElementById("form-tarefa"),
+  containerFormTarefa: document.getElementById("container-form-tarefa"),
+  btnToggleForm: document.getElementById("btn-toggle-form"),
+  btnCancelarForm: document.getElementById("btn-cancelar-form"),
   inputTitulo: document.getElementById("titulo"),
   inputDescricao: document.getElementById("descricao"),
   inputPrioridade: document.getElementById("prioridade"),
@@ -32,7 +35,10 @@ const elementos = {
   totalTarefas: document.getElementById("total-tarefas"),
   totalPendentes: document.getElementById("total-pendentes"),
   totalConcluidas: document.getElementById("total-concluidas"),
-  filtroPrioridade: document.getElementById("filtro-prioridade"),
+  tituloGraficoPrioridades: document.getElementById(
+    "titulo-grafico-prioridades",
+  ),
+  subtituloListaTarefas: document.getElementById("subtitulo-lista-tarefas"),
 
   formEditarTarefa: document.getElementById("form-editar-tarefa"),
   inputEditarId: document.getElementById("editar-id"),
@@ -60,13 +66,13 @@ const modalEditar = new bootstrap.Modal(elementos.modalEditarElemento);
    ========================================================= */
 const estado = {
   filtroAtual: "todas",
+  prioridadeFiltro: "todas",
   termoBusca: "",
   tarefasCache: [],
   timersAviso: {
     entrada: null,
     saida: null,
     ocultar: null,
-    prioridadeFiltro: "todas",
   },
 };
 
@@ -473,8 +479,12 @@ function prepararTarefasParaExibicao() {
   renderizarTarefas(tarefasBuscadas);
   atualizarBotoesFiltro();
   atualizarContador(estado.tarefasCache.length);
+
+  //Dashboard principal continua mostrando o total geral
   atualizarDashboard(estado.tarefasCache);
-  atualizarGraficoPrioridades(estado.tarefasCache);
+
+  // Gráfico e legenda passam a refletir o contexto atual da lista
+  atualizarGraficoPrioridades(tarefasBuscadas);
 }
 
 /* =========================================================
@@ -529,6 +539,7 @@ async function criarTarefa(event) {
   }
 
   elementos.formTarefa.reset();
+  esconderFormularioTarefa();
   await carregarTarefas();
 }
 
@@ -659,6 +670,30 @@ async function tratarCliqueLista(event) {
 }
 
 /* =========================================================
+   CONTROLO DE EXIBIÇÃO DO FORMULÁRIO DE NOVA TAREFA
+   ========================================================= */
+
+function mostrarFormularioTarefa() {
+  elementos.containerFormTarefa.classList.remove("d-none");
+  elementos.btnToggleForm.setAttribute(
+    "aria-label",
+    "Ocultar formulário de nova tarefa",
+  );
+  elementos.btnToggleForm.innerHTML = '<i class="bi bi-dash-lg"></i>';
+  elementos.inputTitulo.focus();
+}
+
+function esconderFormularioTarefa() {
+  elementos.containerFormTarefa.classList.add("d-none");
+  elementos.formTarefa.reset();
+  elementos.btnToggleForm.setAttribute(
+    "aria-label",
+    "Mostrar formulário de nova tarefa",
+  );
+  elementos.btnToggleForm.innerHTML = '<i class="bi bi-plus-lg"></i>';
+}
+
+/* =========================================================
    CONFIGURAÇÃO DOS EVENTOS DA APLICAÇÃO
    ========================================================= */
 function configurarEventos() {
@@ -679,6 +714,18 @@ function configurarEventos() {
     prepararTarefasParaExibicao();
   });
 
+  elementos.btnToggleForm.addEventListener("click", () => {
+    const formularioEstaVisivel =
+      !elementos.containerFormTarefa.classList.contains("d-none");
+
+    if (formularioEstaVisivel) {
+      esconderFormularioTarefa();
+    } else {
+      mostrarFormularioTarefa();
+    }
+  });
+
+  elementos.btnCancelarForm.addEventListener("click", esconderFormularioTarefa);
   elementos.formTarefa.addEventListener("submit", criarTarefa);
   elementos.formEditarTarefa.addEventListener("submit", guardarEdicao);
   elementos.btnRecarregar.addEventListener("click", carregarTarefas);
